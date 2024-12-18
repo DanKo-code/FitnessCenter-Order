@@ -6,7 +6,10 @@ import (
 	"github.com/DanKo-code/FitnessCenter-Order/internal/usecase"
 	orderProtobuf "github.com/DanKo-code/FitnessCenter-Protobuf/gen/FitnessCenter.protobuf.order"
 	"github.com/google/uuid"
+	"github.com/stripe/stripe-go/v81"
+	"github.com/stripe/stripe-go/v81/checkout/session"
 	"google.golang.org/grpc"
+	"log"
 )
 
 type OrdergRPC struct {
@@ -73,4 +76,38 @@ func (o OrdergRPC) GetUserOrders(ctx context.Context, request *orderProtobuf.Get
 	}
 
 	return response, nil
+}
+
+func (o OrdergRPC) CreateCheckoutSession(ctx context.Context, request *orderProtobuf.CreateCheckoutSessionRequest) (*orderProtobuf.CreateCheckoutSessionResponse, error) {
+
+	stripe.Key = "sk_test_51PxOL0A75DCPwyUvr31hX8Ju84gJa8CuRgT2o7RA5eRVfhPSwtRRmfpxVYbPkCpSNSF4xPytvonrhMq7qZtkeewb00SO5G61FT"
+
+	domain := "http://localhost:3333/main/abonnements"
+	params := &stripe.CheckoutSessionParams{
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
+			&stripe.CheckoutSessionLineItemParams{
+				Price:    stripe.String(request.StripePriceId),
+				Quantity: stripe.Int64(1),
+			},
+		},
+		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
+		SuccessURL: stripe.String(domain),
+		CancelURL:  stripe.String(domain),
+
+		Metadata: map[string]string{
+			"client_id":    request.ClientId,
+			"abonement_id": request.AbonementId,
+		},
+	}
+
+	s, err := session.New(params)
+	if err != nil {
+		log.Printf("session.New: %v", err)
+	}
+
+	createCheckoutSessionResponse := &orderProtobuf.CreateCheckoutSessionResponse{
+		SessionUrl: s.ID,
+	}
+
+	return createCheckoutSessionResponse, nil
 }

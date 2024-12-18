@@ -3,11 +3,12 @@ module github.com/DanKo-code/FitnessCenter-Order
 go 1.23.3
 
 require (
-	github.com/DanKo-code/FitnessCenter-Protobuf v0.6.0
+	github.com/DanKo-code/FitnessCenter-Protobuf v0.6.22
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
+	github.com/stripe/stripe-go/v81 v81.1.1
 	google.golang.org/grpc v1.68.1
 )
 
