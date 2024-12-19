@@ -7,6 +7,7 @@ import (
 	"github.com/DanKo-code/FitnessCenter-Order/internal/usecase/order_usecase"
 	"github.com/DanKo-code/FitnessCenter-Order/pkg/logger"
 	abonementGRPC "github.com/DanKo-code/FitnessCenter-Protobuf/gen/FitnessCenter.protobuf.abonement"
+	serviceGRPC "github.com/DanKo-code/FitnessCenter-Protobuf/gen/FitnessCenter.protobuf.service"
 	userGRPC "github.com/DanKo-code/FitnessCenter-Protobuf/gen/FitnessCenter.protobuf.user"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -37,12 +38,19 @@ func NewAppGRPC() (*AppGRPC, error) {
 		return nil, err
 	}
 
+	connService, err := grpc.NewClient(os.Getenv("SERVICE_SERVICE_PORT"), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.ErrorLogger.Printf("failed to connect to service server: %v", err)
+		return nil, err
+	}
+
 	abonementClient := abonementGRPC.NewAbonementClient(connAbonement)
 	userClient := userGRPC.NewUserClient(connUser)
+	serviceClient := serviceGRPC.NewServiceClient(connService)
 
 	repository := postgres.NewOrderRepository(db)
 
-	OrderUseCase := order_usecase.NewOrderUseCase(repository, &abonementClient, &userClient)
+	OrderUseCase := order_usecase.NewOrderUseCase(repository, &abonementClient, &userClient, &serviceClient)
 
 	gRPCServer := grpc.NewServer()
 

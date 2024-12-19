@@ -51,28 +51,9 @@ func (o OrdergRPC) CreateOrder(ctx context.Context, request *orderProtobuf.Creat
 }
 
 func (o OrdergRPC) GetUserOrders(ctx context.Context, request *orderProtobuf.GetUserOrdersRequest) (*orderProtobuf.GetUserOrdersResponse, error) {
-	orders, err := o.orderUseCase.GetUserOrders(ctx, uuid.MustParse(request.UserId))
+	response, err := o.orderUseCase.GetUserOrders(ctx, uuid.MustParse(request.UserId))
 	if err != nil {
 		return nil, err
-	}
-
-	var orderObjects []*orderProtobuf.OrderObject
-	for _, order := range orders {
-
-		orderObject := &orderProtobuf.OrderObject{
-			Id:          order.Id.String(),
-			UserId:      order.UserId.String(),
-			AbonementId: order.AbonementId.String(),
-			Status:      order.Status,
-			CreatedTime: order.CreatedTime.String(),
-			UpdatedTime: order.UpdatedTime.String(),
-		}
-
-		orderObjects = append(orderObjects, orderObject)
-	}
-
-	response := &orderProtobuf.GetUserOrdersResponse{
-		UserObjects: orderObjects,
 	}
 
 	return response, nil
