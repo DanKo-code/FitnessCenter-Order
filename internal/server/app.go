@@ -1,7 +1,10 @@
 package server
 
 import (
+	"context"
 	"fmt"
+	"github.com/DanKo-code/FitnessCenter-Order/internal/background"
+	"github.com/DanKo-code/FitnessCenter-Order/internal/background/order_background"
 	orderGRPC "github.com/DanKo-code/FitnessCenter-Order/internal/delivery/grpc"
 	"github.com/DanKo-code/FitnessCenter-Order/internal/repository/postgres"
 	"github.com/DanKo-code/FitnessCenter-Order/internal/usecase/order_usecase"
@@ -17,10 +20,16 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+)
+
+var (
+	interval = 1 * time.Minute / 3
 )
 
 type AppGRPC struct {
 	gRPCServer *grpc.Server
+	oc         background.OrderExpiredChecker
 }
 
 func NewAppGRPC() (*AppGRPC, error) {
@@ -56,8 +65,11 @@ func NewAppGRPC() (*AppGRPC, error) {
 
 	orderGRPC.Register(gRPCServer, OrderUseCase)
 
+	oc := order_background.NewOrderExpiredChecker(OrderUseCase)
+
 	return &AppGRPC{
 		gRPCServer: gRPCServer,
+		oc:         oc,
 	}, nil
 }
 
@@ -71,6 +83,8 @@ func (app *AppGRPC) Run(port string) error {
 
 	logger.InfoLogger.Printf("Starting gRPC server on port %s", port)
 
+	stopChecker := make(chan struct{})
+
 	go func() {
 		if err = app.gRPCServer.Serve(listen); err != nil {
 			logger.FatalLogger.Fatalf("Failed to serve: %v", err)
@@ -80,10 +94,15 @@ func (app *AppGRPC) Run(port string) error {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 
+	go app.oc.StartOrderExpiredChecker(context.TODO(), interval, stopChecker)
+
 	<-quit
 
+	close(stopChecker)
+
 	logger.InfoLogger.Printf("stopping gRPC server %s", port)
-	app.gRPCServer.GracefulStop()
+
+	go app.gRPCServer.GracefulStop()
 
 	return nil
 }

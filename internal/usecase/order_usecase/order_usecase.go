@@ -10,6 +10,7 @@ import (
 	serviceGRPC "github.com/DanKo-code/FitnessCenter-Protobuf/gen/FitnessCenter.protobuf.service"
 	userGRPC "github.com/DanKo-code/FitnessCenter-Protobuf/gen/FitnessCenter.protobuf.user"
 	"github.com/google/uuid"
+	"strconv"
 	"time"
 )
 
@@ -45,7 +46,7 @@ func (o *OrderUseCase) CreateCoachAbonement(ctx context.Context, cmd *dtos.Creat
 
 	getAbonementByIdRequest := &abonementGRPC.GetAbonementByIdRequest{Id: cmd.AbonementId.String()}
 
-	_, err = (*o.abonementClient).GetAbonementById(ctx, getAbonementByIdRequest)
+	abonement, err := (*o.abonementClient).GetAbonementById(ctx, getAbonementByIdRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +59,15 @@ func (o *OrderUseCase) CreateCoachAbonement(ctx context.Context, cmd *dtos.Creat
 		UpdatedTime: time.Now(),
 		CreatedTime: time.Now(),
 	}
+
+	number, err := strconv.Atoi(abonement.AbonementObject.Validity)
+	if err != nil {
+		return nil, err
+	}
+
+	expiredTime := order.CreatedTime.AddDate(0, number, 0)
+
+	order.ExpiredTime = expiredTime
 
 	err = o.orderRepo.CreateCoachAbonement(ctx, order)
 	if err != nil {
@@ -151,4 +161,13 @@ func (o *OrderUseCase) GetUserOrders(ctx context.Context, userId uuid.UUID) (*or
 	}
 
 	return &getUserOrdersResponse, nil
+}
+
+func (o *OrderUseCase) SetExpiredOrdersTasks(ctx context.Context) error {
+	err := o.orderRepo.SetExpiredOrdersTasks(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -12,4 +12,5 @@ type Order struct {
 	Status      string    `db:"status"`
 	UpdatedTime time.Time `db:"updated_time"`
 	CreatedTime time.Time `db:"created_time"`
+	ExpiredTime time.Time `db:"expiration_time"`
 }

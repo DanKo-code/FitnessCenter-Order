@@ -10,6 +10,6 @@ import (
 
 type OrderUseCase interface {
 	CreateCoachAbonement(ctx context.Context, cmd *dtos.CreateOrderCommand) (*models.Order, error)
-
 	GetUserOrders(ctx context.Context, userId uuid.UUID) (*orderGRPC.GetUserOrdersResponse, error)
+	SetExpiredOrdersTasks(ctx context.Context) error
 }
