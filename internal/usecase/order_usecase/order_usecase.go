@@ -5,6 +5,7 @@ import (
 	"github.com/DanKo-code/FitnessCenter-Order/internal/dtos"
 	"github.com/DanKo-code/FitnessCenter-Order/internal/models"
 	"github.com/DanKo-code/FitnessCenter-Order/internal/repository"
+	"github.com/DanKo-code/FitnessCenter-Order/pkg/logger"
 	abonementGRPC "github.com/DanKo-code/FitnessCenter-Protobuf/gen/FitnessCenter.protobuf.abonement"
 	orderGRPC "github.com/DanKo-code/FitnessCenter-Protobuf/gen/FitnessCenter.protobuf.order"
 	serviceGRPC "github.com/DanKo-code/FitnessCenter-Protobuf/gen/FitnessCenter.protobuf.service"
@@ -86,16 +87,20 @@ func (o *OrderUseCase) GetUserOrders(ctx context.Context, userId uuid.UUID) (*or
 		return nil, err
 	}
 
+	// models orders
 	orders, err := o.orderRepo.GetUserOrders(ctx, userId)
 	if err != nil {
 		return nil, err
 	}
+
+	logger.DebugLogger.Printf("user orders: %v\n", orders)
 
 	var abonementIds []string
 	for _, abonement := range orders {
 		abonementIds = append(abonementIds, abonement.AbonementId.String())
 	}
 
+	// proto abonements
 	abonements := &abonementGRPC.GetAbonementsByIdsResponse{}
 	if len(abonementIds) > 0 {
 
@@ -109,6 +114,14 @@ func (o *OrderUseCase) GetUserOrders(ctx context.Context, userId uuid.UUID) (*or
 		}
 	}
 
+	abonIdAbonement := map[string]*abonementGRPC.AbonementObject{}
+	for _, abonement := range abonements.AbonementObjects {
+		abonIdAbonement[abonement.Id] = abonement
+	}
+
+	logger.DebugLogger.Printf("user orders abonements: %v\n", abonements)
+
+	// proto abonements with services
 	abonIdServicesMap := map[string][]*serviceGRPC.ServiceObject{}
 	if len(abonementIds) > 0 {
 
@@ -131,7 +144,9 @@ func (o *OrderUseCase) GetUserOrders(ctx context.Context, userId uuid.UUID) (*or
 		}
 	}
 
-	abonIdOrder := map[string]*orderGRPC.OrderObject{}
+	logger.DebugLogger.Printf("user abonIdServicesMap: %v\n", abonIdServicesMap)
+
+	orderIdOrder := map[uuid.UUID]*orderGRPC.OrderObject{}
 	for _, order := range orders {
 		orderObject := &orderGRPC.OrderObject{
 			Id:          order.Id.String(),
@@ -142,19 +157,18 @@ func (o *OrderUseCase) GetUserOrders(ctx context.Context, userId uuid.UUID) (*or
 			UpdatedTime: order.UpdatedTime.String(),
 		}
 
-		abonIdOrder[orderObject.AbonementId] = orderObject
+		orderIdOrder[order.Id] = orderObject
 	}
 
 	getUserOrdersResponse := orderGRPC.GetUserOrdersResponse{
 		OrderObjectWithAbonementWithServices: nil,
 	}
 
-	for _, abonement := range abonements.AbonementObjects {
-
+	for _, order := range orders {
 		orderObjectWithAbonement := &orderGRPC.OrderObjectWithAbonementWithServices{
-			OrderObject:     abonIdOrder[abonement.Id],
-			AbonementObject: abonement,
-			ServiceObjects:  abonIdServicesMap[abonement.Id],
+			OrderObject:     orderIdOrder[order.Id],
+			AbonementObject: abonIdAbonement[order.AbonementId.String()],
+			ServiceObjects:  abonIdServicesMap[order.AbonementId.String()],
 		}
 
 		getUserOrdersResponse.OrderObjectWithAbonementWithServices = append(getUserOrdersResponse.OrderObjectWithAbonementWithServices, orderObjectWithAbonement)
