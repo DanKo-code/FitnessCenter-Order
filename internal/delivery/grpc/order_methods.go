@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/DanKo-code/FitnessCenter-Order/internal/dtos"
 	"github.com/DanKo-code/FitnessCenter-Order/internal/usecase"
+	"github.com/DanKo-code/FitnessCenter-Order/pkg/logger"
 	orderProtobuf "github.com/DanKo-code/FitnessCenter-Protobuf/gen/FitnessCenter.protobuf.order"
 	"github.com/google/uuid"
 	"github.com/stripe/stripe-go/v81"
@@ -23,6 +24,8 @@ func Register(gRPC *grpc.Server, orderUseCase usecase.OrderUseCase) {
 }
 
 func (o OrdergRPC) CreateOrder(ctx context.Context, request *orderProtobuf.CreateOrderRequest) (*orderProtobuf.CreateOrderResponse, error) {
+
+	logger.DebugLogger.Printf("request.OrderDataForCreate: %v", request.OrderDataForCreate)
 
 	cmd := &dtos.CreateOrderCommand{
 		UserId:      uuid.MustParse(request.OrderDataForCreate.UserId),
